@@ -168,8 +168,8 @@ public class RenderSectionClient {
                                                               layerBounds.getMinX(),
                                                               layerBounds.getMinY(),
                                                               z,
-                                                              (int) (layerBounds.getDeltaX() + 0.5),
-                                                              (int) (layerBounds.getDeltaY() + 0.5),
+                                                              clientParameters.bounds.get(1) - clientParameters.bounds.get(0), //Width
+                                                              clientParameters.bounds.get(3) - clientParameters.bounds.get(2), //Height
                                                               clientParameters.scale);
         }
 
