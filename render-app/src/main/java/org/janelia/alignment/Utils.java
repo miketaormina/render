@@ -45,6 +45,7 @@ import ij.process.ByteProcessor;
 import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
 
+import ij.process.ImageConverter;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.CoordinateTransform;
 import mpicbg.models.IllDefinedDataPointsException;
@@ -144,9 +145,19 @@ public class Utils {
      *   if any errors occur.
      */
     public static void writeTiffImage(final BufferedImage bufferedImage,
-                                      final OutputStream outputStream)
+                                      final OutputStream outputStream, final boolean convertToGray)
             throws IOException {
         final ImagePlus ip = new ImagePlus("", bufferedImage);
+        
+        if(convertToGray)
+        {
+            //Convert TIFF to 8bit
+            ImageConverter ic = new ImageConverter(ip);
+            ic.convertToGray8();
+            ip.updateAndDraw();
+            LOG.info("Bit Depth: " + ip.getBitDepth());
+        }
+
         final FileInfo fileInfo = ip.getFileInfo();
         final TiffEncoder tiffEncoder = new TiffEncoder(fileInfo);
         tiffEncoder.write(outputStream);
@@ -178,7 +189,7 @@ public class Utils {
         if (TIFF_FORMAT.equals(format) || (TIF_FORMAT.equals(format))) {
 
             try (final FileOutputStream outputStream = new FileOutputStream(file)) {
-                writeTiffImage(image, outputStream);
+                writeTiffImage(image, outputStream, convertToGray);
             }
 
         } else {
