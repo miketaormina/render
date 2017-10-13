@@ -20,9 +20,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Java client for rendering a composite image of all tiles in a section for one or more sections.
- * Images are placed in [rootDirectory]/[project]/[stack]/sections_at_[scale]/000/1/123.png
+ * Images are placed by default in [rootDirectory]/[project]/[stack]/sections_at_[scale]/000/001/123.png
+ * If the 'customFolder' and 'customSubFolder' parameters are supplied, output structure will be: rootDirectory/customFolder/customSubFolder/123.tiff
  *
  * @author Eric Trautman
+ * Modified by Totte Karlsson and Forrest Collman
  */
 public class RenderSectionClient {
 
@@ -30,7 +32,6 @@ public class RenderSectionClient {
     private static class Parameters extends RenderDataClientParameters {
 
         // NOTE: --baseDataUrl, --owner, and --project parameters defined in RenderDataClientParameters
-
         @Parameter(names = "--stack", description = "Stack name", required = true)
         private String stack;
 
@@ -55,25 +56,28 @@ public class RenderSectionClient {
         @Parameter(description = "Z values for sections to render", required = true)
         private List<Double> zValues;
 
-        @Parameter(names = "--bounds", description = "Bounds used for all layers: xmin, xmax, ymin,ymax", required = false)
-        private List<Integer> bounds;
-
-        @Parameter(names = "--customOutputFolder", description = "Custom named folder for output. Overrides the default format 'sections_at_#' folder", required = false)
-        private String customOutputFolder;
-
-        @Parameter(names = "--customSubFolder", description = "Name for subfolder to customOutputFolder, if used", required = false)
-        private String customSubFolder;
-
-        @Parameter(names = "--padFileNamesWithZeros", description = "Pad outputfilenames with leading zeroes, i.e. 12.tiff -> 00012.tiff", required = false)
-        private boolean padFileNameWithZeroes;
-
         @Parameter(names = "--maxIntensity",description = "Max intensity to render image", required = false)
         private Integer maxIntensity;
 
         @Parameter(names = "--minIntensity",description = "Min intensity to render image", required = false)
         private Integer minIntensity;
-    }
+		
+        @Parameter(names = "--bounds", description = "Bounds used for all layers: xmin, xmax, ymin,ymax", required = false)
+        private List<Integer> bounds;
 
+        @Parameter(names = "--customOutputFolder", description = "Custom named folder for output. Overrides the default format 'sections_at_#' folder", required = false)
+        private String customOutPutFolder="";
+
+        @Parameter(names = "--customSubFolder", description = "Name for subfolder to customOutputFolder, if used", required = false)
+        private String customSubFolder;
+        
+        @Parameter(names = "--channelName",     description = "Name for channelfolder, if used", required = false)
+        private String channelName;
+
+        @Parameter(names = "--padFileNamesWithZeros", description = "Pad outputfilenames with leading zeroes, i.e. 12.tiff -> 00012.tiff", required = false)
+        private boolean padFileNameWithZeroes;
+    }
+    
     /**
      * @param  args  see {@link Parameters} for command line argument details.
      */
@@ -210,6 +214,48 @@ public class RenderSectionClient {
     }
 
     private File getSectionFile(final Double z) {
+
+        String fName = (clientParameters.padFileNameWithZeroes) ? String.format("%05d", z.intValue()) : Float.toString(z.floatValue());
+
+        File secDir;
+
+        if(clientParameters.customOutPutFolder.length() < 1)
+        {
+            final int thousands = z.intValue() / 1000;
+            final File thousandsDir = new File(sectionDirectory, getNumericDirectoryName(thousands));
+
+            final int hundreds = (z.intValue() % 1000) / 100;
+            final File hundredsDir = new File(thousandsDir, String.valueOf(hundreds));
+
+            secDir = hundredsDir;
+        }
+        else
+        {
+            secDir = sectionDirectory;
+        }
+
+        ensureWritableDirectory(secDir);
+        return new File(secDir, fName + "." + clientParameters.format.toLowerCase());
+     }
+
+    private void ensureWritableDirectory(final File directory) {
+        // try twice to work around concurrent access issues
+        if (! directory.exists()) {
+            if (! directory.mkdirs()) {
+                if (! directory.exists()) {
+                    // last try
+                    if (! directory.mkdirs()) {
+                        if (! directory.exists()) {
+                            throw new IllegalArgumentException("failed to create " + directory);
+                        }
+                    }
+                }
+            }
+        }
+        if (! directory.canWrite()) {
+            throw new IllegalArgumentException("not allowed to write to " + directory);
+        }
+    }
 
         final String fileName = clientParameters.padFileNameWithZeroes ?
                                 String.format("%05d", z.intValue()) : z.toString();
