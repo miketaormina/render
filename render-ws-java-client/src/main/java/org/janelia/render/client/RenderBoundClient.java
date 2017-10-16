@@ -66,8 +66,11 @@ public class RenderBoundClient {
         @Parameter(names = "--channelName",     description = "Name for channelfolder, if used", required = false)
         private String channelName;
 
-        @Parameter(names = "--padFileNamesWithZeroes", description = "Pad outputfilenames with leading zeroes, i.e. 12.tiff -> 00012.tiff", required = false, arity = 1)
+        @Parameter(names = "--padFileNamesWithZeroes", description = "Pad outputfilenames with leading zeroes, i.e. 12.0.tiff -> 00012.tiff", required = false, arity = 1)
         private boolean padFileNamesWithZeroes = true;
+
+        @Parameter(names = "--convertToGrey", description = "Write images to 8bit", required = false, arity = 1)
+        private boolean convertToGrey = false;
     }
     
     /**
@@ -139,7 +142,7 @@ public class RenderBoundClient {
 
         final Bounds layerBounds = renderDataClient.getLayerBounds(clientParameters.stack, z);
 
-        String parametersUrl; 
+        String parametersUrl;
         if(clientParameters.bounds != null && clientParameters.bounds.size() == 4) //Read bounds from supplied parameters
         {
             LOG.debug("Using user bounds");
@@ -184,7 +187,7 @@ public class RenderBoundClient {
 
         ShortRenderer.render(renderParameters, sectionImage, imageProcessorCache);
 
-        Utils.saveImage(sectionImage, sectionFile.getAbsolutePath(), clientParameters.format, false, 0.85f);
+        Utils.saveImage(sectionImage, sectionFile.getAbsolutePath(), clientParameters.format, clientParameters.convertToGrey, 0.85f);
 
         LOG.info("generateImageForZ: {}, exit", z);
     }
