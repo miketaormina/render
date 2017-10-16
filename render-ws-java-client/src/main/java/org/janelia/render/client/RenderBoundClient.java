@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.janelia.alignment.ArgbRenderer;
+import org.janelia.alignment.ShortRenderer;
 import org.janelia.alignment.RenderParameters;
 import org.janelia.alignment.Utils;
 import org.janelia.alignment.spec.Bounds;
@@ -26,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * @author Eric Trautman
  * Modified by Totte Karlsson and Forrest Collman
  */
-public class RenderSectionClient {
+public class RenderBoundClient {
 
     @SuppressWarnings("ALL")
     private static class Parameters extends RenderDataClientParameters {
@@ -47,20 +48,11 @@ public class RenderSectionClient {
         @Parameter(names = "--doFilter", description = "Use ad hoc filter to support alignment", required = false, arity = 1)
         private boolean doFilter = true;
 
-        @Parameter(names = "--channels", description = "Specify channel(s) and weights to render (e.g. 'DAPI' or 'DAPI__0.7__TdTomato__0.3')", required = false)
-        private String channels;
-
         @Parameter(names = "--fillWithNoise", description = "Fill image with noise before rendering to improve point match derivation", required = false, arity = 1)
         private boolean fillWithNoise = true;
 
         @Parameter(description = "Z values for sections to render", required = true)
         private List<Double> zValues;
-
-        @Parameter(names = "--maxIntensity",description = "Max intensity to render image", required = false)
-        private Integer maxIntensity;
-
-        @Parameter(names = "--minIntensity",description = "Min intensity to render image", required = false)
-        private Integer minIntensity;
 		
         @Parameter(names = "--bounds", description = "Bounds used for all layers: xmin, xmax, ymin,ymax", required = false)
         private List<Integer> bounds;
@@ -74,8 +66,8 @@ public class RenderSectionClient {
         @Parameter(names = "--channelName",     description = "Name for channelfolder, if used", required = false)
         private String channelName;
 
-        @Parameter(names = "--padFileNamesWithZeros", description = "Pad outputfilenames with leading zeroes, i.e. 12.tiff -> 00012.tiff", required = false)
-        private boolean padFileNameWithZeroes;
+        @Parameter(names = "--padFileNamesWithZeroes", description = "Pad outputfilenames with leading zeroes, i.e. 12.tiff -> 00012.tiff", required = false, arity = 1)
+        private boolean padFileNamesWithZeroes = true;
     }
     
     /**
@@ -87,11 +79,11 @@ public class RenderSectionClient {
             public void runClient(final String[] args) throws Exception {
 
                 final Parameters parameters = new Parameters();
-                parameters.parse(args, RenderSectionClient.class);
+                parameters.parse(args, RenderBoundClient.class);
 
                 LOG.info("runClient: entry, parameters={}", parameters);
 
-                final RenderSectionClient client = new RenderSectionClient(parameters);
+                final RenderBoundClient client = new RenderBoundClient(parameters);
 
                 for (final Double z : parameters.zValues) {
                     client.generateImageForZ(z);
@@ -107,31 +99,28 @@ public class RenderSectionClient {
     private final ImageProcessorCache imageProcessorCache;
     private final RenderDataClient renderDataClient;
 
-    public RenderSectionClient(final Parameters clientParameters) {
+    public RenderBoundClient(final Parameters clientParameters) {
 
         this.clientParameters = clientParameters;
 
-        final Path sectionPath;
-        if (clientParameters.customOutputFolder != null) {
-            if (clientParameters.customSubFolder != null) {
-                sectionPath = Paths.get(clientParameters.rootDirectory,
-                                        clientParameters.customOutputFolder,
-                                        clientParameters.customSubFolder);
-            } else {
-                sectionPath = Paths.get(clientParameters.rootDirectory,
-                                        clientParameters.customOutputFolder);
-            }
-        } else {
-            final String sectionsAtScaleName = "sections_at_" + clientParameters.scale;
-            sectionPath = Paths.get(clientParameters.rootDirectory,
-                                    clientParameters.project,
-                                    clientParameters.stack,
-                                    sectionsAtScaleName);
+        Path projectPath = Paths.get(clientParameters.rootDirectory, clientParameters.project).toAbsolutePath();
+        Path sectionPath;
+
+        if(clientParameters.customOutPutFolder.length() > 0)
+        {
+            projectPath = Paths.get(clientParameters.rootDirectory, clientParameters.customOutPutFolder, clientParameters.channelName).toAbsolutePath();            
+            this.sectionDirectory = projectPath.toFile();
+        }
+        else
+        {
+        	final String sectionsAtScaleName = "sections_at_" + clientParameters.scale;
+        	sectionPath = Paths.get(projectPath.toString(),
+                                           clientParameters.stack,
+                                           sectionsAtScaleName).toAbsolutePath();
+            this.sectionDirectory = sectionPath.toFile();
         }
 
-        this.sectionDirectory = sectionPath.toAbsolutePath().toFile();
-
-        FileUtil.ensureWritableDirectory(this.sectionDirectory);
+        ensureWritableDirectory(this.sectionDirectory);
 
         // set cache size to 50MB so that masks get cached but most of RAM is left for target image
         final int maxCachedPixels = 50 * 1000000;
@@ -172,51 +161,37 @@ public class RenderSectionClient {
                                                               layerBounds.getMinX(),
                                                               layerBounds.getMinY(),
                                                               z,
-                                                              clientParameters.bounds.get(1) - clientParameters.bounds.get(0), //Width
-                                                              clientParameters.bounds.get(3) - clientParameters.bounds.get(2), //Height
+                                                              (int) (layerBounds.getDeltaX() + 0.5),
+                                                              (int) (layerBounds.getDeltaY() + 0.5),
                                                               clientParameters.scale);
         }
-
-        if (clientParameters.minIntensity != null) {
-
-            if (clientParameters.maxIntensity != null) {
-                parametersUrl += "?minIntensity=" + clientParameters.minIntensity +
-                                 "&maxIntensity=" + clientParameters.maxIntensity;
-            } else {
-                parametersUrl += "?minIntensity=" + clientParameters.minIntensity;
-            }
-
-        } else if (clientParameters.maxIntensity != null) {
-            parametersUrl += "?maxIntensity=" + clientParameters.maxIntensity;
-        }
-
+        
         LOG.debug("generateImageForZ: {}, loading {}", z, parametersUrl);
 
         final RenderParameters renderParameters = RenderParameters.loadFromUrl(parametersUrl);
         renderParameters.setDoFilter(clientParameters.doFilter);
-        renderParameters.setChannels(clientParameters.channels);
 
         final File sectionFile = getSectionFile(z);
 
         final BufferedImage sectionImage = renderParameters.openTargetImage();
 
-        if (clientParameters.fillWithNoise) {
+        if (clientParameters.fillWithNoise) 
+        {
             final ByteProcessor ip = new ByteProcessor(sectionImage.getWidth(), sectionImage.getHeight());
             mpicbg.ij.util.Util.fillWithNoise(ip);
             sectionImage.getGraphics().drawImage(ip.createImage(), 0, 0, null);
         }
 
-        ArgbRenderer.render(renderParameters, sectionImage, imageProcessorCache);
+        ShortRenderer.render(renderParameters, sectionImage, imageProcessorCache);
 
-        Utils.saveImage(sectionImage, sectionFile.getAbsolutePath(), clientParameters.format, true, 0.85f);
+        Utils.saveImage(sectionImage, sectionFile.getAbsolutePath(), clientParameters.format, false, 0.85f);
 
         LOG.info("generateImageForZ: {}, exit", z);
     }
 
     private File getSectionFile(final Double z) {
 
-        String fName = (clientParameters.padFileNameWithZeroes) ? String.format("%05d", z.intValue()) : Float.toString(z.floatValue());
-
+        String fName = (clientParameters.padFileNamesWithZeroes) ? String.format("%05d", z.intValue()) : Float.toString(z.floatValue());
         File secDir;
 
         if(clientParameters.customOutPutFolder.length() < 1)
@@ -249,28 +224,15 @@ public class RenderSectionClient {
         }
     }
 
-        final String fileName = clientParameters.padFileNameWithZeroes ?
-                                String.format("%05d", z.intValue()) : z.toString();
-
-        final File parentDirectory;
-        if (clientParameters.customOutputFolder == null) {
-
-            final int thousands = z.intValue() / 1000;
-            final File thousandsDir = new File(sectionDirectory, String.format("%03d", thousands));
-
-            final int hundreds = (z.intValue() % 1000) / 100;
-            parentDirectory = new File(thousandsDir, String.valueOf(hundreds));
-
-        } else {
-
-            parentDirectory = sectionDirectory;
-
+    private String getNumericDirectoryName(final int value) {
+        String pad = "00";
+        if (value > 99) {
+            pad = "";
+        } else if (value > 9) {
+            pad = "0";
         }
-
-        FileUtil.ensureWritableDirectory(parentDirectory);
-
-        return new File(parentDirectory, fileName + "." + clientParameters.format.toLowerCase());
+        return pad + value;
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(RenderSectionClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RenderBoundClient.class);
 }
