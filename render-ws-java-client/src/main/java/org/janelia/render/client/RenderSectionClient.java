@@ -74,8 +74,11 @@ public class RenderSectionClient {
         @Parameter(names = "--channelName",     description = "Name for channelfolder, if used", required = false)
         private String channelName;
 
-        @Parameter(names = "--padFileNamesWithZeros", description = "Pad outputfilenames with leading zeroes, i.e. 12.tiff -> 00012.tiff", required = false)
-        private boolean padFileNameWithZeroes;
+        @Parameter(names = "--padFileNamesWithZeroes", description = "Pad outputfilenames with leading zeroes, i.e. 12.0.tiff -> 00012.tiff", required = false, arity = 1)
+        private boolean padFileNamesWithZeroes = true;
+
+        @Parameter(names = "--imageType", description = "24,16 or 8 bit", required = false, arity = 1)
+        private int imageType = 24;
     }
     
     /**
@@ -134,6 +137,7 @@ public class RenderSectionClient {
         FileUtil.ensureWritableDirectory(this.sectionDirectory);
 
         // set cache size to 50MB so that masks get cached but most of RAM is left for target image
+
         final int maxCachedPixels = 50 * 1000000;
         this.imageProcessorCache = new ImageProcessorCache(maxCachedPixels, false, false);
 
@@ -150,7 +154,7 @@ public class RenderSectionClient {
 
         final Bounds layerBounds = renderDataClient.getLayerBounds(clientParameters.stack, z);
 
-        String parametersUrl; 
+        String parametersUrl;
         if(clientParameters.bounds != null && clientParameters.bounds.size() == 4) //Read bounds from supplied parameters
         {
             LOG.debug("Using user bounds");
@@ -198,9 +202,20 @@ public class RenderSectionClient {
 
         final File sectionFile = getSectionFile(z);
 
-        final BufferedImage sectionImage = renderParameters.openTargetImage();
-
-        if (clientParameters.fillWithNoise) {
+        BufferedImage sectionImage;
+        switch(clientParameters.imageType)
+        {
+            case 8:  sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_BYTE_GRAY); break;
+            case 16: 
+                renderParameters.setMinIntensity((double) 0);
+                renderParameters.setMaxIntensity((double) 65535);
+                sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_USHORT_GRAY); break;
+            case 24: 
+            default: sectionImage = renderParameters.openTargetImage(); break;
+        }
+       
+        if (clientParameters.fillWithNoise) 
+        {
             final ByteProcessor ip = new ByteProcessor(sectionImage.getWidth(), sectionImage.getHeight());
             mpicbg.ij.util.Util.fillWithNoise(ip);
             sectionImage.getGraphics().drawImage(ip.createImage(), 0, 0, null);
