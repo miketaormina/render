@@ -70,9 +70,6 @@ public class RenderSectionClient {
 
         @Parameter(names = "--customSubFolder", description = "Name for subfolder to customOutputFolder, if used", required = false)
         private String customSubFolder;
-        
-        @Parameter(names = "--channelName",     description = "Name for channelfolder, if used", required = false)
-        private String channelName;
 
         @Parameter(names = "--padFileNamesWithZeroes", description = "Pad outputfilenames with leading zeroes, i.e. 12.0.tiff -> 00012.tiff", required = false, arity = 1)
         private boolean padFileNamesWithZeroes = true;
