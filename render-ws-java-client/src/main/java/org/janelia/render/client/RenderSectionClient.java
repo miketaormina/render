@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.janelia.alignment.ArgbRenderer;
+import org.janelia.alignment.ShortRenderer;
 import org.janelia.alignment.RenderParameters;
 import org.janelia.alignment.Utils;
 import org.janelia.alignment.spec.Bounds;
