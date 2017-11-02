@@ -217,7 +217,8 @@ public class RenderSectionClient {
             mpicbg.ij.util.Util.fillWithNoise(ip);
             sectionImage.getGraphics().drawImage(ip.createImage(), 0, 0, null);
         }
-
+        ShortRenderer.render(renderParameters, sectionImage, imageProcessorCache);
+        
         Utils.saveImage(sectionImage, sectionFile.getAbsolutePath(), clientParameters.format, false, 0.85f);
         LOG.info("generateImageForZ: {}, exit", z);
     }
