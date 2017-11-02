@@ -134,18 +134,23 @@ public class Utils {
             throw new IOException("no ImageIO writers exist for the '" + format + "' format");
         }
     }
-
+    public static void writeTiffImage(final BufferedImage bufferedImage,
+                                      final OutputStream outputStream)
+                                      throws IOException {
+            writeTiffImage(bufferedImage,outputStream, false);
+    }
     /**
      * Writes a {@link BufferedImage} to the specified {@link OutputStream} using ImageJ's {@link TiffEncoder}.
      *
      * @param  bufferedImage     image to write.
      * @param  outputStream      target stream.
-     *
+     * @param  convertToGrapy    whether to convert image to grayscale
      * @throws IOException
      *   if any errors occur.
      */
     public static void writeTiffImage(final BufferedImage bufferedImage,
-                                      final OutputStream outputStream, final boolean convertToGray)
+                                      final OutputStream outputStream,
+                                      final boolean convertToGray)
             throws IOException {
         final ImagePlus ip = new ImagePlus("", bufferedImage);
         

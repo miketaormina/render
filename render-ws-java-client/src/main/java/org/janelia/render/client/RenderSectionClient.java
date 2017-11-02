@@ -66,7 +66,7 @@ public class RenderSectionClient {
         private List<Integer> bounds;
 
         @Parameter(names = "--customOutputFolder", description = "Custom named folder for output. Overrides the default format 'sections_at_#' folder", required = false)
-        private String customOutPutFolder="";
+        private String customOutputFolder="";
 
         @Parameter(names = "--customSubFolder", description = "Name for subfolder to customOutputFolder, if used", required = false)
         private String customSubFolder;
@@ -226,63 +226,29 @@ public class RenderSectionClient {
     }
 
     private File getSectionFile(final Double z) {
-
-        String fName = (clientParameters.padFileNameWithZeroes) ? String.format("%05d", z.intValue()) : Float.toString(z.floatValue());
-
-        File secDir;
-
-        if(clientParameters.customOutPutFolder.length() < 1)
-        {
-            final int thousands = z.intValue() / 1000;
-            final File thousandsDir = new File(sectionDirectory, getNumericDirectoryName(thousands));
-
-            final int hundreds = (z.intValue() % 1000) / 100;
-            final File hundredsDir = new File(thousandsDir, String.valueOf(hundreds));
-
-            secDir = hundredsDir;
-        }
-        else
-        {
-            secDir = sectionDirectory;
-        }
-
-        ensureWritableDirectory(secDir);
-        return new File(secDir, fName + "." + clientParameters.format.toLowerCase());
-     }
-
-    private void ensureWritableDirectory(final File directory) {
-        // try twice to work around concurrent access issues
-        if (!directory.exists() && !directory.mkdirs() && !directory.exists() && !directory.mkdirs() && !directory.exists()) {
-            throw new IllegalArgumentException("failed to create " + directory);
-        }
         
-        if (!directory.canWrite()) {
-            throw new IllegalArgumentException("not allowed to write to " + directory);
-        }
-    }
-
-        final String fileName = clientParameters.padFileNameWithZeroes ?
-                                String.format("%05d", z.intValue()) : z.toString();
-
-        final File parentDirectory;
-        if (clientParameters.customOutputFolder == null) {
-
-            final int thousands = z.intValue() / 1000;
-            final File thousandsDir = new File(sectionDirectory, String.format("%03d", thousands));
-
-            final int hundreds = (z.intValue() % 1000) / 100;
-            parentDirectory = new File(thousandsDir, String.valueOf(hundreds));
-
-        } else {
-
-            parentDirectory = sectionDirectory;
-
-        }
-
-        FileUtil.ensureWritableDirectory(parentDirectory);
-
-        return new File(parentDirectory, fileName + "." + clientParameters.format.toLowerCase());
-    }
+                final String fileName = clientParameters.padFileNamesWithZeroes ?
+                                        String.format("%05d", z.intValue()) : z.toString();
+        
+                final File parentDirectory;
+                if (clientParameters.customOutputFolder == null) {
+        
+                    final int thousands = z.intValue() / 1000;
+                    final File thousandsDir = new File(sectionDirectory, String.format("%03d", thousands));
+        
+                    final int hundreds = (z.intValue() % 1000) / 100;
+                    parentDirectory = new File(thousandsDir, String.valueOf(hundreds));
+        
+                } else {
+        
+                    parentDirectory = sectionDirectory;
+        
+                }
+        
+                FileUtil.ensureWritableDirectory(parentDirectory);
+        
+                return new File(parentDirectory, fileName + "." + clientParameters.format.toLowerCase());
+            }
 
     private static final Logger LOG = LoggerFactory.getLogger(RenderSectionClient.class);
 }
