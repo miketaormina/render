@@ -203,13 +203,21 @@ public class RenderSectionClient {
         BufferedImage sectionImage;
         switch(clientParameters.imageType)
         {
-            case 8:  sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_BYTE_GRAY); break;
+            case 8:  
+                sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_BYTE_GRAY); 
+                ArgbRenderer.render(renderParameters, sectionImage, imageProcessorCache);
+                break;
             case 16: 
                 renderParameters.setMinIntensity((double) 0);
                 renderParameters.setMaxIntensity((double) 65535);
-                sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_USHORT_GRAY); break;
+                sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_USHORT_GRAY); 
+                ShortRenderer.render(renderParameters, sectionImage, imageProcessorCache);
+                break;
             case 24: 
-            default: sectionImage = renderParameters.openTargetImage(); break;
+            default:
+                sectionImage = renderParameters.openTargetImage();
+                ArgbRenderer.render(renderParameters, sectionImage, imageProcessorCache);
+                break;
         }
        
         if (clientParameters.fillWithNoise) 
@@ -218,9 +226,8 @@ public class RenderSectionClient {
             mpicbg.ij.util.Util.fillWithNoise(ip);
             sectionImage.getGraphics().drawImage(ip.createImage(), 0, 0, null);
         }
-        ShortRenderer.render(renderParameters, sectionImage, imageProcessorCache);
         
-        Utils.saveImage(sectionImage, sectionFile.getAbsolutePath(), clientParameters.format, false, 0.85f);
+        Utils.saveImage(sectionImage, sectionFile.getAbsolutePath(), clientParameters.format, clientParameters.imageType == 8, 0.85f);
         LOG.info("generateImageForZ: {}, exit", z);
     }
 
