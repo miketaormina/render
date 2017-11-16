@@ -204,13 +204,13 @@ public class RenderSectionClient {
         switch(clientParameters.imageType)
         {
             case 8:  
-                sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_BYTE_GRAY); 
+                sectionImage = renderParameters.getBlankBufferedImage(BufferedImage.TYPE_BYTE_GRAY); 
                 ArgbRenderer.render(renderParameters, sectionImage, imageProcessorCache);
                 break;
             case 16: 
                 renderParameters.setMinIntensity((double) 0);
                 renderParameters.setMaxIntensity((double) 65535);
-                sectionImage = renderParameters.openTargetImage(BufferedImage.TYPE_USHORT_GRAY); 
+                sectionImage = renderParameters.getBlankBufferedImage(BufferedImage.TYPE_USHORT_GRAY); 
                 ShortRenderer.render(renderParameters, sectionImage, imageProcessorCache);
                 break;
             case 24: 
