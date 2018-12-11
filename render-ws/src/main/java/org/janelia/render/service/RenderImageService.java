@@ -224,6 +224,35 @@ public class RenderImageService {
         }
     }
 
+    @Path("v1/owner/{owner}/project/{project}/stack/{stack}/z/{z}/tiff16-image")
+    @GET
+    @Produces(RenderServiceUtil.IMAGE_TIFF_MIME_TYPE)
+    @ApiOperation(
+            tags = "Section Image APIs",
+            value = "Render TIFF image for a section")
+    public Response renderTiff16ImageForZ(@PathParam("owner") final String owner,
+                                        @PathParam("project") final String project,
+                                        @PathParam("stack") final String stack,
+                                        @PathParam("z") final Double z,
+                                        @BeanParam final RenderQueryParameters renderQueryParameters,
+                                        @QueryParam("maxTileSpecsToRender") final Integer maxTileSpecsToRender,
+                                        @Context final Request request) {
+
+        LOG.info("renderTiffImageForZ: entry, owner={}, project={}, stack={}, z={}",
+                 owner, project, stack, z);
+
+        renderQueryParameters.setDefaultScale(0.01);
+
+        final ResponseHelper responseHelper = new ResponseHelper(request, getStackMetaData(owner, project, stack));
+        if (responseHelper.isModified()) {
+            final RenderParameters renderParameters =
+                    renderDataService.getRenderParametersForZ(owner, project, stack, z, renderQueryParameters);
+            return RenderServiceUtil.renderTiffImage(renderParameters, maxTileSpecsToRender, responseHelper, true);
+        } else {
+            return responseHelper.getNotModifiedResponse();
+        }
+    }
+
     @Path("v1/owner/{owner}/project/{project}/stack/{stack}/dvid/imagetile/raw/xy/{width}_{height}/{x}_{y}_{z}/jpg")
     @GET
     @Produces(RenderServiceUtil.IMAGE_JPEG_MIME_TYPE)
